@@ -74,13 +74,13 @@ export class Authentication {
         this.findAccountEmployeeIdInput = this.page.getByPlaceholder('Employee ID', { exact: true });
         this.findAccountButton = this.page.getByRole('button', { name: /find account/i });
         this.accountNotFoundError = this.page.getByText(`Employee ID '${process.env.INVALID_EMPLOYEE_ID}' not found.`);
-        this.accountAlreadyActiveMessage = this.page.getByText('This account is already');
+        this.accountAlreadyActiveMessage = this.page.getByText(/already active|already registered/i);
 
         // Verification & OTP Elements
         this.verifyDetailsHeading = this.page.getByRole('heading', { name: /verify details/i });
         this.employeeNameDisplay = this.page.locator('[data-testid="employee-name"], .employee-name');
-        this.maskedPhoneDisplay = this.page.locator('[data-testid="masked-phone"], .masked-phone, span:has-text("985")');
-        this.sendOtpButton = this.page.getByRole('button', { name: /send otp/i });
+        this.maskedPhoneDisplay = this.page.getByText('Sent to 984****');
+        this.sendOtpButton = this.page.getByRole('button', { name: 'Send OTP to Mobile' });
         this.otpSentNotification = this.page.getByText(/otp.*sent/i);
         this.otpInput = this.page.locator('input#otp, input[name="otp"]');
         this.verifyOtpButton = this.page.getByRole('button', { name: /verify otp/i });

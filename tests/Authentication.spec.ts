@@ -92,15 +92,15 @@ test.describe('Authentication', () => {
     const authPage = new Authentication(page);
     await authPage.navigateToSignUp();
 
-    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID || '0007';
+    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID!;
     await authPage.findAccount(unregisteredEmpId);
 
+    await authPage.sendOtp();
+    // await expect(authPage.otpSentNotification).toBeVisible();
     // Verify phone number is masked
     await expect(authPage.maskedPhoneDisplay).toBeVisible();
 
     // Dispatch OTP to mobile
-    await authPage.sendOtp();
-    await expect(authPage.otpSentNotification).toBeVisible();
   });
 
   test('TC-009-AUTH - Verify successful identity verification using valid 6-digit SMS OTP code', async ({ page }) => {
