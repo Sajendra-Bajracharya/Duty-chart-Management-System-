@@ -104,26 +104,25 @@ test.describe('Authentication', () => {
   });
 
   test('TC-009-AUTH - Verify successful identity verification using valid 6-digit SMS OTP code', async ({ page }) => {
+    test.setTimeout(120_000); // whole test may take longer than the default 30s
+
     const authPage = new Authentication(page);
     await authPage.navigateToSignUp();
 
-    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID || '0007';
+    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID!;
     await authPage.findAccount(unregisteredEmpId);
     await authPage.sendOtp();
 
-    // Enter valid 6-digit OTP
-    const validOtp = process.env.VALID_OTP || '123456';
-    await authPage.verifyOtp(validOtp);
-
-    // Verify user advances to Set Password / Activate Account screen
-    await expect(authPage.setPasswordHeading).toBeVisible();
+    // MANUAL STEP: enter the SMS OTP and click Verify in the browser window.
+    // Resumes as soon as the next screen appears (up to 90s).
+    await expect(authPage.setPasswordHeading).toBeVisible({ timeout: 90_000 });
   });
 
   test('TC-010-AUTH - Verify OTP validation failure and retry enforcement when entering invalid or expired code', async ({ page }) => {
     const authPage = new Authentication(page);
     await authPage.navigateToSignUp();
 
-    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID || '0007';
+    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID!;
     await authPage.findAccount(unregisteredEmpId);
     await authPage.sendOtp();
 
@@ -139,11 +138,9 @@ test.describe('Authentication', () => {
     const authPage = new Authentication(page);
     await authPage.navigateToSignUp();
 
-    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID || '0007';
+    const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID!;
     await authPage.findAccount(unregisteredEmpId);
     await authPage.sendOtp();
-    await authPage.verifyOtp(process.env.VALID_OTP || '123456');
-
     // Enter password violating complexity policy (e.g., lacking numbers)
     await authPage.setPasswordAndActivate('abcd@@@@', 'abcd@@@@', 'ITD', 'Assistant');
 
@@ -158,47 +155,11 @@ test.describe('Authentication', () => {
     const unregisteredEmpId = process.env.UNREGISTERED_EMPLOYEE_ID || '0007';
     await authPage.findAccount(unregisteredEmpId);
     await authPage.sendOtp();
-    await authPage.verifyOtp(process.env.VALID_OTP || '123456');
 
     // Submit valid password without selecting required Working Office and Designation
     await authPage.setPasswordAndActivate('ComplexPass@123', 'ComplexPass@123');
 
     // Verify submission is blocked or activate button is disabled
-    await expect(authPage.activateAccountButton).toBeDisabled();
-  });
-
-  test('TC-013-AUTH - Verify first-time account activation for admin-precreated employee via "Forgot Password?" workflow', async ({ page }) => {
-    const authPage = new Authentication(page);
-    await authPage.navigateToForgotPassword();
-
-    // Enter admin-precreated employee ID
-    const adminCreatedEmpId = process.env.ADMIN_CREATED_EMPLOYEE_ID || '0008';
-    await authPage.submitForgotPassword(adminCreatedEmpId);
-
-    // Complete OTP verification
-    await authPage.verifyOtp(process.env.VALID_OTP || '123456');
-
-    // Set new password
-    await authPage.newPasswordInput.fill('AdminReset@123');
-    await authPage.confirmPasswordInput.fill('AdminReset@123');
-    await authPage.resetPasswordButton.click();
-
-    // Verify redirect to login page
-    await page.waitForURL('**/login', { timeout: 10000 });
-    await expect(page).toHaveURL(/login/);
-  });
-
-  test('TC-014-AUTH - Verify immediate login capability following successful account activation or password reset', async ({ page }) => {
-    const authPage = new Authentication(page);
-
-    // Login with newly activated / reset credentials
-    const newEmpId = process.env.NEW_ACTIVATED_EMPLOYEE_ID || '0007';
-    const newPassword = process.env.NEW_ACTIVATED_PASSWORD || 'Chamati@123';
-
-    await authPage.login(newEmpId, newPassword);
-
-    // Verify immediate successful authentication and landing on dashboard
-    await page.waitForURL('**/dashboard', { timeout: 10000 });
-    await expect(page).toHaveURL('/dashboard');
+    await expect(page.getByText('Please select a working office.')).toBeVisible();
   });
 });

@@ -69,7 +69,7 @@ export class Authentication {
         this.signUpLink = this.page.getByRole('button', { name: 'Sign up', exact: true });
         this.forgotPasswordLink = this.page.getByRole('link', { name: /forgot password/i });
 
-        // Find Account / Self-Registration Elements
+        // Find Account / Self-Registration Elementsveri
         this.findAccountTitle = this.page.getByRole('heading', { name: /find your account|employee activation/i });
         this.findAccountEmployeeIdInput = this.page.getByPlaceholder('Employee ID', { exact: true });
         this.findAccountButton = this.page.getByRole('button', { name: /find account/i });
@@ -80,19 +80,19 @@ export class Authentication {
         this.verifyDetailsHeading = this.page.getByRole('heading', { name: /verify details/i });
         this.employeeNameDisplay = this.page.locator('[data-testid="employee-name"], .employee-name');
         this.maskedPhoneDisplay = this.page.getByText('Sent to 984****');
-        this.sendOtpButton = this.page.getByRole('button', { name: 'Send OTP to Mobile' });
+        this.sendOtpButton = this.page.getByRole('button', { name: 'Send OTP to Mobile' })
         this.otpSentNotification = this.page.getByText(/otp.*sent/i);
-        this.otpInput = this.page.locator('input#otp, input[name="otp"]');
-        this.verifyOtpButton = this.page.getByRole('button', { name: /verify otp/i });
-        this.invalidOtpError = this.page.getByText(/invalid otp|incorrect otp|expired/i);
+        this.otpInput = this.page.getByPlaceholder('••••••');
+        this.verifyOtpButton = this.page.getByRole('button', { name: 'Verify OTP' })
+        this.invalidOtpError = this.page.getByText('Invalid OTP. Please try again.');
 
         // Set Password / Account Activation Elements
         this.setPasswordHeading = this.page.getByRole('heading', { name: /set password|activate account/i });
-        this.newPasswordInput = this.page.locator('#new_password, input[name="new_password"]');
-        this.confirmPasswordInput = this.page.locator('#confirm_password, input[name="confirm_password"]');
-        this.workingOfficeDropdown = this.page.locator('select#working_office, select[name="working_office"], [data-testid="working-office"]');
-        this.designationDropdown = this.page.locator('select#designation, select[name="designation"], [data-testid="designation"]');
-        this.activateAccountButton = this.page.getByRole('button', { name: /activate account|save/i });
+        this.newPasswordInput = this.page.getByPlaceholder('New Password')
+        this.confirmPasswordInput = this.page.getByPlaceholder('Confirm Password')
+        this.workingOfficeDropdown = this.page.locator('button[role="combobox"]').filter({ hasText: /working office/i });
+        this.designationDropdown = this.page.locator('button[role="combobox"]').filter({ hasText: /working position|designation/i });
+        this.activateAccountButton = this.page.getByRole('button', { name: 'Activate Account' });
         this.passwordComplexityError = this.page.getByText(/password must be at least 8 characters/i);
         this.mandatoryFieldError = this.page.getByText(/field is required|please select/i);
 
@@ -145,6 +145,36 @@ export class Authentication {
         await this.verifyOtpButton.click();
     }
 
+    async selectDropdownOption(trigger: Locator, value: string) {
+        // 1. Click the combobox trigger button
+        await trigger.click();
+
+        // 2. Locate any search/cmdk input inside the opened popover / dialog
+        const popover = this.page.locator('[data-radix-popper-content-wrapper], [role="dialog"], [cmdk-root]').last();
+        const searchInput = popover.locator('input');
+
+        if (await searchInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await searchInput.fill(value);
+            await this.page.waitForTimeout(300);
+        }
+
+        // 3. Find matching item inside popover
+        const optionInPopover = popover
+            .locator('[role="option"], [cmdk-item], [data-radix-collection-item], div')
+            .filter({ hasText: new RegExp(value, 'i') })
+            .first();
+
+        if (await optionInPopover.isVisible({ timeout: 1500 }).catch(() => false)) {
+            await optionInPopover.click();
+        } else {
+            // Fallback: search globally
+            const pageOption = this.page.getByRole('option', { name: new RegExp(value, 'i') })
+                .or(this.page.locator('[role="option"], [cmdk-item]').filter({ hasText: new RegExp(value, 'i') }))
+                .or(this.page.getByText(new RegExp(value, 'i')));
+            await pageOption.first().click();
+        }
+    }
+
     async setPasswordAndActivate(
         newPassword: string,
         confirmPassword: string,
@@ -153,12 +183,15 @@ export class Authentication {
     ) {
         await this.newPasswordInput.fill(newPassword);
         await this.confirmPasswordInput.fill(confirmPassword);
+
         if (office) {
-            await this.workingOfficeDropdown.selectOption(office);
+            await this.selectDropdownOption(this.workingOfficeDropdown, office);
         }
+
         if (designation) {
-            await this.designationDropdown.selectOption(designation);
+            await this.selectDropdownOption(this.designationDropdown, designation);
         }
+
         await this.activateAccountButton.click();
     }
 
