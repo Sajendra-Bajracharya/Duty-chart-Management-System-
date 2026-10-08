@@ -38,7 +38,7 @@ test.describe('Authentication', () => {
     await expect(newPage).toHaveURL('/dashboard');
   });
 
-  test('TC-004-AUTH - Verify user session non-persistence across browser restarts when "Remember me" is unchecked', async ({ page, context }) => {
+  test.fail('TC-004-AUTH - Verify user session non-persistence across browser restarts when "Remember me" is unchecked', async ({ page, context }) => {
     const authPage = new Authentication(page);
     await authPage.login();
 

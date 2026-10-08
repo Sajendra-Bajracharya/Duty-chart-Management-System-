@@ -18,16 +18,14 @@ test.describe('Duty Chart Creation', () => {
   test('Verify Duty Chart is created successfully', async ({ page }) => {
     const dutyChartPage = new DutyChartCreation(page);
 
-    // 1. Navigate to Duty Chart Calendar
     await dutyChartPage.navigateToCalendar();
 
     // 2. Open Create Duty Chart Modal
     await dutyChartPage.openCreateModal();
 
-    // 3. Select Office in Modal
+
     await dutyChartPage.selectOfficeInModal('Software and Security Wing');
 
-    // 4. Fill Duty Chart Title
     await dutyChartPage.fillChartName('test duty chart automation');
 
     // 5. Select Effective Date and End Date
