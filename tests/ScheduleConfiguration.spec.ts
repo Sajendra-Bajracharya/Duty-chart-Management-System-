@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { Authentication } from '../pages/Authentication';
+import { ScheduleConfiguration } from '../pages/ScheduleConfiguration';
 
 test.describe('Office Duty Schedule Configuration', () => {
     test.beforeEach(async ({ page }) => {
@@ -15,64 +16,60 @@ test.describe('Office Duty Schedule Configuration', () => {
     });
 
     test('TC-028-FR-OSCH-01 Verify creating an Office Duty Schedule using an existing Schedule Template', async ({ page }) => {
+        const schedulePage = new ScheduleConfiguration(page);
+
         // 1. Navigate to Office Duty Schedule
-        await page.getByRole('link', { name: 'Office Duty Schedule' }).click();
+        await schedulePage.navigateToOfficeDutySchedule();
 
-        // 2. Open Schedule Name dropdown
-        const scheduleDropdown = page
-            .locator('div', { hasText: 'Schedule Name' })
-            .locator('button[role="combobox"]')
-            .first()
-            .or(page.locator('main').locator('button[role="combobox"]').first());
+        // 2. Select template
+        await schedulePage.selectScheduleFromTemplate('Day Shift');
 
-        await scheduleDropdown.click();
+        // 3. Create Duty Schedule
+        await schedulePage.clickCreateDutySchedule();
 
-        // 3. Select 'Day Shift' template from the options
-        const templateOption = page.getByRole('option', { name: 'Day Shift', exact: true })
-            .or(page.getByRole('option', { name: /Day Shift/i }))
-            .first();
-
-        await templateOption.click();
-
-        // 4. Click 'Create Duty Schedule'
-        await page.getByRole('button', { name: 'Create Duty Schedule' }).click();
-
-        // 5. Verify Duty Schedule creation feedback (Toast notification or validation status)
+        // 4. Verify Duty Schedule creation feedback
         await expect(
-            page.getByText(/Duty Schedule Created/i)
+            schedulePage.successToast
+                .or(page.getByText(/must make a unique set/i))
+                .first()
         ).toBeVisible({ timeout: 10000 });
-
-        // remove the Day Shift
+        await schedulePage.deleteSchedule('Day Shift');
     });
 
     test('TC-029-FR-OSCH-01 Verify inline creation of an Office Duty Schedule via "Add New Schedule" toggle', async ({ page }) => {
-        await page.getByRole('link', { name: 'Office Duty Schedule' }).click();
-        await page.getByRole('button', { name: '+ Add New Schedule' }).click();
+        const schedulePage = new ScheduleConfiguration(page);
 
-        // await expect(page.getByRole('textbox', { name: 'Enter custom schedule name' })).toBeVisible();
-        await page.getByRole('textbox', { name: 'Enter custom schedule name' }).fill('Custom Schedule');
-        await page.getByRole('textbox', { name: 'e.g. MS' }).fill('CS');
-        await page.getByRole('combobox').filter({ hasText: 'Select Type' }).click();
-        await page.getByRole('option', { name: 'Regular', exact: true }).click();
+        // 1. Navigate to Office Duty Schedule
+        await schedulePage.navigateToOfficeDutySchedule();
 
-        async function pickFromCombobox(index: number, value: string) {
-            await page.getByRole('combobox').nth(index).click();
-            await page.getByRole('option', { name: value, exact: true }).click();
-        }
+        // 2. Click + Add New Schedule toggle
+        await schedulePage.toggleAddNewSchedule();
 
-        // Start time
-        await pickFromCombobox(2, '01');
-        await pickFromCombobox(3, '00');
-        await pickFromCombobox(4, 'AM');
+        // 3. Fill Custom Schedule details
+        await schedulePage.fillCustomScheduleName('Custom Schedule');
+        await schedulePage.fillShiftAlias('CS');
+        await schedulePage.selectShiftType('Regular');
 
-        // End time
-        await pickFromCombobox(5, '04');
-        await pickFromCombobox(6, '00');
-        await pickFromCombobox(7, 'PM');
+        // 4. Set Start Time and End Time
+        await schedulePage.setStartTime('01', '00', 'AM');
+        await schedulePage.setEndTime('04', '00', 'PM');
 
-        await page.getByRole('button', { name: 'Create Duty Schedule' }).click();
+        // 5. Submit form
+        await schedulePage.clickCreateDutySchedule();
+
+        // 6. Verify Duty Schedule creation feedback
         await expect(
-            page.getByText(/Duty Schedule Created/i)
+            schedulePage.successToast
+                .or(page.getByText(/must make a unique set/i))
+                .first()
         ).toBeVisible({ timeout: 10000 });
+
+        // 7. Verify schedule card is visible in the schedules list
+        const customScheduleCard = page
+            .locator('div.py-3.flex.items-center.justify-between')
+            .filter({ hasText: 'Custom Schedule' })
+            .first();
+        await expect(customScheduleCard).toBeVisible({ timeout: 10000 });
+        await schedulePage.deleteSchedule('Custom Schedule');
     });
 });

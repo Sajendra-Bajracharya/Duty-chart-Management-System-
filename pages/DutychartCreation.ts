@@ -59,7 +59,7 @@ export class DutyChartCreation {
 
     async navigateToCalendar() {
         await this.dutyChartCalendarNav.click();
-        await this.page.waitForLoadState('networkidle').catch(() => {});
+        await this.page.waitForLoadState('networkidle').catch(() => { });
     }
 
     async selectOfficeInCalendar(officeName?: string) {
@@ -140,14 +140,15 @@ export class DutyChartCreation {
             .or(this.page.getByRole('button', { name: 'Create', exact: true }))
             .first();
         await createBtn.click();
-
-        // 2. Confirm creation on the confirmation dialog
+    }
+    // 2. Confirm creation on the confirmation dialog
+    async confirmCreation() {
         const confirmBtn = this.page
             .getByRole('dialog', { name: /confirm duty chart creation/i })
             .getByRole('button', { name: 'Create Duty Chart' })
             .or(this.page.getByRole('button', { name: 'Create Duty Chart' }).last());
 
-        await confirmBtn.waitFor({ state: 'visible', timeout: 5000 });
+       // await confirmBtn.waitFor({ state: 'visible', timeout: 5000 });
         await confirmBtn.click();
     }
 
