@@ -119,4 +119,66 @@ test.describe('Duty Chart Creation', () => {
     // Verify Duty Chart creation success notification
     await expect(page.getByText(/Duty Chart Created/i)).toBeVisible({ timeout: 10000 });
   });
+
+  test('TC-042-FR-CHT-03 Verify date validation error when End Date precedes Effective Date in Duty Chart', async ({ page }) => {
+    const dutyChartPage = new DutyChartCreation(page);
+    await dutyChartPage.navigateToCalendar();
+    await dutyChartPage.openCreateModal();
+    await dutyChartPage.selectOfficeInModal('Software and Security Wing');
+    await dutyChartPage.fillChartName('Jestha Rotation');
+
+    // Set Effective Date to a later day than End Date (end precedes effective)
+    await dutyChartPage.selectEffectiveDate('25');
+    await dutyChartPage.selectEndDate('10');
+
+    await dutyChartPage.selectShift(/Evening Shift/i);
+    await dutyChartPage.submitForm();
+
+    // Verify submission is blocked with date validation error
+    await expect(page.getByText(/End date cannot be before effective date/i)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('TC-044-FR-XLS-01 Verify "Download Template" Excel button is dynamically enabled only after all required criteria are selected', async ({ page }) => {
+    const dutyChartPage = new DutyChartCreation(page);
+    const downloadBtn = page.getByRole('button', { name: 'Download Template' });
+
+    await dutyChartPage.navigateToCalendar();
+    await dutyChartPage.openCreateModal();
+    await dutyChartPage.selectOfficeInModal('Software and Security Wing');
+    await expect(downloadBtn).toBeDisabled();
+    await dutyChartPage.fillChartName('Jestha Rotation');
+
+    // Set Effective Date to a later day than End Date (end precedes effective)
+    await dutyChartPage.selectEffectiveDate('10');
+    await dutyChartPage.selectEndDate('25');
+    await dutyChartPage.selectShift(/Evening Shift/i);
+
+    await expect(downloadBtn).toBeEnabled();
+  });
+
+  test('TC-048-FR-MAN-01 Verify manual employee duty assignment in "Single" date mode from Duty Chart Calendar', async ({ page }) => {
+    const dutyChartPage = new DutyChartCreation(page);
+    await dutyChartPage.navigateToCalendar();
+    await page.getByRole('combobox').filter({ hasText: 'Select Office' }).click();
+    await page.getByRole('option').filter({ hasText: 'Software and Security Wing (' }).click();
+    await page.getByRole('button').filter({ hasText: /^$/ }).nth(3).click();
+    await page.getByText('Select Employee').click();
+    await page.getByPlaceholder('Search employee by name, ID').click();
+    await page.getByPlaceholder('Search employee by name, ID').fill('40160');
+    await page.getByRole('option', { name: '40160 - Sajendra Bajracharya' }).click();
+    await page.getByRole('combobox').filter({ hasText: 'Select Shift' }).click();
+    await page.getByRole('option', { name: 'Evening Shift (12:00:00 - 19:' }).click();
+    await page.getByRole('button', { name: 'single' }).click();
+    await page.getByRole('button', { name: 'Assign' }).click();
+    await expect(page.getByText(/Duty Created Successfully/i)).toBeVisible();
+    await page.locator('div').filter({ hasText: /^Sajendra BajracharyaES$/ }).nth(1).click();
+    await page.getByRole('checkbox').nth(1).click();
+    await page.getByRole('button', { name: 'Delete Selected' }).click();
+    await expect(page.getByRole('alertdialog', { name: 'Confirm Bulk Delete' })).toBeVisible();
+    await page.getByRole('button', { name: 'Delete' }).click();
+
+  });
+
+
+
 });
