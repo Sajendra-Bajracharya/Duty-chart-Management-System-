@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { Authentication } from '../pages/Authentication';
 import { DutyChartCreation } from '../pages/DutychartCreation';
+import { EmployeeAssignment } from '../pages/EmployeeAssignment';
 
 test.describe('Duty Chart Creation', () => {
   test.beforeEach(async ({ page }) => {
@@ -157,25 +158,35 @@ test.describe('Duty Chart Creation', () => {
   });
 
   test('TC-048-FR-MAN-01 Verify manual employee duty assignment in "Single" date mode from Duty Chart Calendar', async ({ page }) => {
-    const dutyChartPage = new DutyChartCreation(page);
-    await dutyChartPage.navigateToCalendar();
-    await page.getByRole('combobox').filter({ hasText: 'Select Office' }).click();
-    await page.getByRole('option').filter({ hasText: 'Software and Security Wing (' }).click();
-    await page.getByRole('button').filter({ hasText: /^$/ }).nth(3).click();
-    await page.getByText('Select Employee').click();
-    await page.getByPlaceholder('Search employee by name, ID').click();
-    await page.getByPlaceholder('Search employee by name, ID').fill('40160');
-    await page.getByRole('option', { name: '40160 - Sajendra Bajracharya' }).click();
-    await page.getByRole('combobox').filter({ hasText: 'Select Shift' }).click();
-    await page.getByRole('option', { name: 'Evening Shift (12:00:00 - 19:' }).click();
-    await page.getByRole('button', { name: 'single' }).click();
-    await page.getByRole('button', { name: 'Assign' }).click();
-    await expect(page.getByText(/Duty Created Successfully/i)).toBeVisible();
-    await page.locator('div').filter({ hasText: /^Sajendra BajracharyaES$/ }).nth(1).click();
-    await page.getByRole('checkbox').nth(1).click();
-    await page.getByRole('button', { name: 'Delete Selected' }).click();
-    await expect(page.getByRole('alertdialog', { name: 'Confirm Bulk Delete' })).toBeVisible();
-    await page.getByRole('button', { name: 'Delete' }).click();
+    const employeeAssignment = new EmployeeAssignment(page);
+
+    await employeeAssignment.navigateToCalendar();
+    await employeeAssignment.selectOffice('Software and Security Wing');
+    await employeeAssignment.clickCalendarSlot(3);
+    await employeeAssignment.selectEmployee('40160', '40160 - Sajendra Bajracharya');
+    await employeeAssignment.selectShift('Evening Shift (12:00:00 - 19:');
+    await employeeAssignment.selectDateMode('single');
+    await employeeAssignment.clickAssign();
+    await employeeAssignment.verifyDutyCreatedSuccessfully();
+
+    // Cleanup
+    await employeeAssignment.cleanupAssignedDuty(/^Sajendra BajracharyaES$/, 1);
+  });
+
+  test('TC-049-FR-MAN-01 Verify manual employee duty assignment across a continuous date range using "Range" moder', async ({ page }) => {
+    const employeeAssignment = new EmployeeAssignment(page);
+
+    await employeeAssignment.navigateToCalendar();
+    await employeeAssignment.selectOffice('Software and Security Wing');
+    await employeeAssignment.clickCalendarSlot(3);
+    await employeeAssignment.selectEmployee('40160', '40160 - Sajendra Bajracharya');
+    await employeeAssignment.selectShift('Evening Shift (12:00:00 - 19:');
+    await employeeAssignment.selectDateMode('range');
+    await employeeAssignment.selectDateRange('22', '25');
+
+    await employeeAssignment.clickAssign();
+    await employeeAssignment.verifyDutyCreatedSuccessfully();
+    await employeeAssignment.cleanupAssignedDuty(/^Sajendra BajracharyaES$/, 1);
 
   });
 

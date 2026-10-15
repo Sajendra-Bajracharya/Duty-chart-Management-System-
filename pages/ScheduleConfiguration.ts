@@ -5,10 +5,14 @@ export class ScheduleConfiguration {
 
     // Navigation
     readonly officeDutyScheduleNav: Locator;
+    readonly dutyScheduleTemplateNav: Locator;
 
     // Schedule Template Mode Locators
     readonly scheduleNameCombobox: Locator;
     readonly officeCombobox: Locator;
+    readonly createDutyScheduleTemplateButton: Locator;
+    readonly updateDutyScheduleTemplateButton: Locator;
+    readonly templateUpdatedToast: Locator;
 
     // Inline (+ Add New Schedule) Mode Locators
     readonly addNewScheduleButton: Locator;
@@ -22,6 +26,7 @@ export class ScheduleConfiguration {
         this.page = page; // take the value from the constuctor  parameter and store in the this.page
 
         this.officeDutyScheduleNav = this.page.getByRole('link', { name: 'Office Duty Schedule' });
+        this.dutyScheduleTemplateNav = this.page.getByRole('link', { name: 'Duty Schedule Template' });
 
         this.scheduleNameCombobox = this.page
             .locator('div', { hasText: 'Schedule Name' })
@@ -30,6 +35,11 @@ export class ScheduleConfiguration {
             .or(this.page.locator('main').locator('button[role="combobox"]').first());
 
         this.officeCombobox = this.page.locator('form').locator('button[role="combobox"]').nth(1);
+
+        // Duty Schedule Template Buttons & Feedback
+        this.createDutyScheduleTemplateButton = this.page.getByRole('button', { name: 'Create Duty Schedule Template' });
+        this.updateDutyScheduleTemplateButton = this.page.getByRole('button', { name: 'Update Duty Schedule Template' });
+        this.templateUpdatedToast = this.page.getByText(/Schedule updated successfully/i);
 
         // Inline (+ Add New Schedule) Mode Locators
         this.addNewScheduleButton = this.page.getByRole('button', { name: '+ Add New Schedule' });
@@ -46,7 +56,11 @@ export class ScheduleConfiguration {
 
     async navigateToOfficeDutySchedule() {
         await this.officeDutyScheduleNav.click();
-        await this.page.waitForLoadState('networkidle').catch(() => {});
+        await this.page.waitForLoadState('networkidle').catch(() => { });
+    }
+
+    async navigateToDutyScheduleTemplate() {
+        await this.dutyScheduleTemplateNav.click();
     }
 
     async selectScheduleFromTemplate(templateName: string = 'Day Shift') {
@@ -72,6 +86,23 @@ export class ScheduleConfiguration {
     async selectShiftType(type: string = 'Regular') {
         await this.shiftTypeCombobox.click();
         await this.page.getByRole('option', { name: type, exact: true }).click();
+    }
+
+    async pickFromComboboxDutySchedule(index: number, value: string) {
+        await this.page.getByRole('combobox').nth(index).click();
+        await this.page.getByRole('option', { name: value, exact: true }).click();
+    }
+
+    async setStartTimeDutySchedule(hour: string, minute: string, period: 'AM' | 'PM') {
+        await this.pickFromComboboxDutySchedule(1, hour);
+        await this.pickFromComboboxDutySchedule(2, minute);
+        await this.pickFromComboboxDutySchedule(3, period);
+    }
+
+    async setEndTimeDutySchedule(hour: string, minute: string, period: 'AM' | 'PM') {
+        await this.pickFromComboboxDutySchedule(4, hour);
+        await this.pickFromComboboxDutySchedule(5, minute);
+        await this.pickFromComboboxDutySchedule(6, period);
     }
 
     async pickFromCombobox(index: number, value: string) {
@@ -141,4 +172,57 @@ export class ScheduleConfiguration {
         await expect(confirmDeleteButton.first()).toBeVisible({ timeout: 5000 });
         await confirmDeleteButton.first().click();
     }
+
+    getTemplateCard(templateName: string): Locator {
+        return this.page
+            .locator('div.border.rounded-lg')
+            .filter({ hasText: templateName })
+            .last()
+            .or(this.page.getByText(templateName));
+    }
+
+    async clickEditTemplate(templateName: string) {
+        const card = this.getTemplateCard(templateName);
+        await expect(card.first()).toBeVisible({ timeout: 5000 });
+        await card.first().hover();
+        await card.first().getByRole('button', { name: 'Edit' }).click();
+    }
+
+    async clickUpdateDutyScheduleTemplate() {
+        await this.updateDutyScheduleTemplateButton.click();
+    }
+
+    async clickCreateDutyScheduleTemplate() {
+        await this.createDutyScheduleTemplateButton.click();
+    }
+
+    async verifyTemplateUpdated() {
+        await expect(this.templateUpdatedToast).toBeVisible({ timeout: 5000 });
+    }
+
+    async deleteTemplate(templateIdentifier: string | number = 1) {
+        if (typeof templateIdentifier === 'string') {
+            const templateCard = this.getTemplateCard(templateIdentifier);
+            await expect(templateCard.first()).toBeVisible({ timeout: 5000 });
+            await templateCard.first().hover().catch(() => {});
+            await templateCard.first().getByRole('button', { name: 'Delete' }).click();
+
+            const confirmDialog = this.page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true });
+            if (await confirmDialog.isVisible({ timeout: 1000 }).catch(() => false)) {
+                await confirmDialog.click();
+            }
+
+            await expect(templateCard.first()).not.toBeVisible({ timeout: 5000 });
+        } else {
+            const deleteButton = this.page.getByRole('button', { name: 'Delete' }).nth(templateIdentifier);
+            await deleteButton.click();
+
+            const confirmDialog = this.page.getByRole('dialog').getByRole('button', { name: 'Delete', exact: true });
+            if (await confirmDialog.isVisible({ timeout: 1000 }).catch(() => false)) {
+                await confirmDialog.click();
+            }
+        }
+    }
 }
+
+
